@@ -1,0 +1,371 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4b9fb094-07b1-498a-8dc5-c503fbe511c8",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-haiku-4-5-20251001",
+          "mode": "list",
+          "cachedResultName": "Claude Haiku 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        1424,
+        336
+      ],
+      "id": "39263e37-90cc-42b2-9d7a-f1ef885cbd15",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "WWP2C6Deve28vYST",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/contacts/{{ $('Get Hubspot Contacts').item.json.vid }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { standardized_job_title: $json.text } }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1696,
+        96
+      ],
+      "id": "b05916a9-dba8-4e5a-a05e-94af1ef8a198",
+      "name": "Write Back to Hubspot",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "J7zO8bhMwygejH8O",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "appToken",
+        "operation": "getAll",
+        "returnAll": true,
+        "additionalFields": {
+          "propertiesCollection": {
+            "propertiesValues": {
+              "properties": [
+                "jobtitle"
+              ],
+              "propertyMode": "valueOnly"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.hubspot",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        96
+      ],
+      "id": "9bd5af59-fd9d-4370-94c4-f8534760662e",
+      "name": "Get Hubspot Contacts",
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "J7zO8bhMwygejH8O",
+          "name": "HubSpot account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "removeItemsSeenInPreviousExecutions",
+        "dedupeValue": "={{ $json.vid }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.removeDuplicates",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ],
+      "id": "4da1f0f7-bd35-4424-bea8-84cb236ce330",
+      "name": "Skip Already Processed"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63ba9cff-79ea-48ec-a0e2-f35f5fd93613",
+              "name": "=domain",
+              "value": "={{ $json['identity-profiles'][0].identities[0].value.split('@')[1] }}",
+              "type": "string"
+            },
+            {
+              "id": "bbde5e7b-0d70-4904-bfe6-afeafa01e975",
+              "name": "=title",
+              "value": "={{ $json.properties.jobtitle?.value || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "c2e7ba7f-7bd7-4619-aa15-bbfc00638ae3",
+              "name": "=email",
+              "value": "={{ $json['identity-profiles'][0].identities[0].value }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "include": "=selected",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        672,
+        96
+      ],
+      "id": "ac610761-45df-4890-a71b-53d2160542a1",
+      "name": "Extract Email, Domain & Title"
+    },
+    {
+      "parameters": {
+        "url": "https://api.zerobounce.net/v2/validate",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        896,
+        -64
+      ],
+      "id": "51becc4f-b250-4049-84e5-18d2e0a809b1",
+      "name": "Verify Email (Zeroboune)",
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "mRcvxlh5JozfrdYx",
+          "name": "Query Auth account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "https://companyenrichment.abstractapi.com/v2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "domain",
+              "value": "={{ $('Extract Email, Domain & Title').item.json.domain }}"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "876bb02d-2319-4d10-9758-e31dc94cb4dc",
+      "name": "Enrich Company (Abstract)",
+      "retryOnFail": true,
+      "waitBetweenTries": 2000,
+      "maxTries": 5,
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "0zIe6AudqhYArUWo",
+          "name": "Query Auth account 2"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You standardize a messy job title into a clean, consistent format: \"Role, Function\".\n\nRules:\n- Expand abbreviations (sr = Senior, dir = Director, vp = Vice President, mktg = Marketing, biz dev = Business Development, ops = Operations).\n- Never repeat a word.\n- If the title is blank or clearly not a real job title, output exactly: Unknown\n- Output ONLY the final title, on a single line. No explanation, no reasoning, no quotes, no alternatives.\n\nExamples:\nvp mktg -> Vice President, Marketing\nsr dir biz dev -> Senior Director, Business Development\ndir biz dev -> Director, Business Development\nhead of ops -> Head of Operations\nasdf -> Unknown\n\nTitle: {{ $('Extract Email, Domain & Title').item.json.title }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1344,
+        96
+      ],
+      "id": "31056c99-8fc0-48ee-8a5e-59b15f6912f6",
+      "name": "Standardize Title (Claude)"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ],
+      "id": "07141a86-663e-431d-90f6-3769d5cad885",
+      "name": "Every 15 Minutes"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Hubspot Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Standardize Title (Claude)",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Hubspot Contacts": {
+      "main": [
+        [
+          {
+            "node": "Skip Already Processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Already Processed": {
+      "main": [
+        [
+          {
+            "node": "Extract Email, Domain & Title",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Email, Domain & Title": {
+      "main": [
+        [
+          {
+            "node": "Enrich Company (Abstract)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Email (Zeroboune)": {
+      "main": [
+        []
+      ]
+    },
+    "Enrich Company (Abstract)": {
+      "main": [
+        [
+          {
+            "node": "Standardize Title (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Standardize Title (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Write Back to Hubspot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 Minutes": {
+      "main": [
+        [
+          {
+            "node": "Get Hubspot Contacts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "ba34ec09-f3f4-48f6-92bb-233d1e1cd389",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1fb0c97cea3f43ec6dc4db1167ae5032dfd98c4e42c1a328be75f09fdb41aa7f"
+  },
+  "nodeGroups": [],
+  "id": "hdtObpxQXbGYxcQ0",
+  "tags": []
+}
