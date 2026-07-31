@@ -67,7 +67,7 @@ The takeaway: on a zero-cost stack this comfortably handles a steady trickle of 
 
 ## 🚀 Run it yourself
 
-1. Get n8n (cloud trial or self-hosted) and import `workflow.json` via the three-dot menu -> Import.
+1. Get n8n (cloud trial or self-hosted) and import `LeadPolish.json` via the three-dot menu -> Import.
 2. Create the accounts you want to use: HubSpot (free), Anthropic (for Claude), and optionally ZeroBounce and Abstract API.
 3. Add the credentials in n8n. Imports bring the nodes but not the secrets, so each needs reconnecting:
    - HubSpot: a private app / service key with contact read and write scopes
